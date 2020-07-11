@@ -16,6 +16,9 @@
 #include <malloc.h>
 #include <stdbool.h>   //注意使用布尔类型时，需要引入此头文件
 
+#define QUEUE_MAX_NUN 4
+
+
 /*******************************************************************************************************************
 
     定义循环队列的结构体
@@ -46,6 +49,10 @@ int main()
     int val;
     QUEUE queue = {NULL,0,0} ;
     initQueue(&queue);
+
+	printf("----------最大队列数量：%u-------------- \n", QUEUE_MAX_NUN);
+
+	
     enQueue(&queue,4);
     enQueue(&queue,5);
     enQueue(&queue,6);
@@ -63,6 +70,13 @@ int main()
     enQueue(&queue,65);
     traverseQueue(&queue);
 
+	printf("==== %p", queue.qBase);
+	
+	free(queue.qBase);
+	queue.qBase = NULL;
+
+	printf("-------------front:%d----------- \n", queue.front);
+	printf("-------------rear:%d----------- \n", queue.rear);
 
     return 0;
 }
@@ -71,7 +85,7 @@ int main()
 ************************************/
 void initQueue(QUEUE *pq)
 {
-    pq->qBase = (int *)malloc(sizeof(int)*6);
+    pq->qBase = (int *)malloc(sizeof(int)*QUEUE_MAX_NUN);
     if(pq->qBase == NULL)
     {
         printf("内存分配失败！\n");
@@ -91,15 +105,22 @@ void initQueue(QUEUE *pq)
 void enQueue(QUEUE *pq , int value)
 {
 
-    if(is_fullQueue(pq))
+    if(is_fullQueue(pq)) //队列满监测
     {
         printf("循环队列已满，拒绝插入%d！\n",value);
 
-    }else
+    }
+	else  //队列还没有满
     {
         pq->qBase[pq->rear] = value;
-        pq->rear = (pq->rear + 1)%6 ;
-        printf("\n %d 入队 \n" , value);
+		printf("----------start-------------- \n", pq->rear);
+		printf("入队编号 ： %d \n", pq->rear);
+
+        pq->rear = (pq->rear + 1)% QUEUE_MAX_NUN;
+
+		printf(" %d 入队 \n" , value);
+		printf("等待入队编号 ： %d \n", pq->rear);
+		printf("------------end------------ \n", pq->rear);
 
     }
 }
@@ -119,7 +140,9 @@ void enQueue(QUEUE *pq , int value)
     {
         printf("循环队列已空！");
     }else
-    {
+    {	
+		printf("---------出队编号：%d--------------- \n", pq->front);
+	
         *value = pq->qBase[pq->front];
         printf("\n %d 出队 \n",*value);
         pq->front = (pq->front + 1)%6 ;
@@ -147,7 +170,7 @@ bool isemptyQueue(QUEUE *pq)
 ************************************/
 bool is_fullQueue(QUEUE *pq)
 {
-    if((pq->rear +1)%6 == pq->front)
+    if((pq->rear +1)% QUEUE_MAX_NUN== pq->front)
     {
         return true;
     }else
