@@ -41,12 +41,12 @@ int main(int argc,char **argv)
         exit(1);
     }
 	//do other things
-	
+	printf("duxie===");
     couter = 0;
 //  循环等待异步读操作结束
     while(aio_error(&rd) == EINPROGRESS)
     {
-       // printf("第%d次\n",++couter);
+        printf("第%d次\n",++couter);
     }
 	
     //获取异步读返回值
