@@ -24,7 +24,7 @@ typedef struct stFunIN1{
  int Func(stAAA *p)
  {
 	 printf ("free ==== start \n");
-	 printf ("free :%p \n", *p);
+	 printf ("free :%p \n", p);
 	 free(p);
 	 //*p = NULL;
 	 printf ("free ====ok \n");	 
@@ -37,7 +37,8 @@ int main()
 {    
 	int num = 0;
     
-    stAAA *Ptest ;
+    stAAA *Ptest ; 
+	stAAA *Ptest1;
 	Ptest = malloc(sizeof(stAAA));
 	
 	printf ("malll :%p \n", Ptest);
@@ -49,6 +50,9 @@ int main()
 	
 	printf ("fun test 1 core ==== %p \n", Ptest);
 	num = Ptest->funP(Ptest);
+	
+	Ptest1 = malloc(sizeof(stAAA));
+	
 	printf ("fun test 2 core ==== %p \n", Ptest);
 	num = Ptest->funP(Ptest);
 	printf ("fun test end ==== %p \n", Ptest);
