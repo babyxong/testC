@@ -17,21 +17,21 @@
   * @param  [in] size: The size of the data to be converted.
   * @return None.
   */
-static inline void BigLittleSwap( uint8_t *pdata, uint32_t size)
+static inline int32_t simBigLittleSwap(uint8_t *pData, uint32_t size)
 {
 	uint32_t i;
-	uint32_t j;
 	uint8_t  tmp;
- 
-	for (i = 0; i < (size+1)/2; i++)
-	{
-		tmp = *(pdata+i);
-		*(pdata+i) = *(pdata+size-i-1);
-		*(pdata+size-i-1) = tmp;
+	
+	if (NULL == pData) {
+		prinf(" 需要打印日志 ");
+		return -1;
 	}
  
-	printf(" pdata: %d \n", *pdata);
-  
+	for (i = 0; i < (size+1)/2; i++) {
+		tmp = *(pData+i);
+		*(pData+i) = *(pData + size -i -1);
+		*(pData+size-i-1) = tmp;
+	}
 }
 
 /**
