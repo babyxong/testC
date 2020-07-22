@@ -172,30 +172,30 @@ const struct SimScsiSense_t sense_code_SPACE_ALLOC_FAILED = {
  * @param   cmbBuf [i], CDB命令buff
  * @return   >0:解析CDB长度， <0:解析CDB长度错误
  */
-S32 simScsiCdbLenParse(U8 *cmbBuf)
+S32 simScsiCdbLenParse(U8 *cmdBuf)
 {
-    S32 cmbLen;
-    switch (SCSI_OPCODE_GRP(cmbBuf[0])) {
+    S32 cmdLen;
+    switch (SCSI_OPCODE_GRP(cmdBuf[0])) {
         case SCSI_OPCODE_GRP_6B:
-            cmbLen = SCSI_CDB_LEN6;
+            cmdLen = SCSI_CDB_LEN6;
             break;
         case SCSI_OPCODE_GRP_10B1:
         case SCSI_OPCODE_GRP_10B2:
-            cmbLen = SCSI_CDB_LEN10;
+            cmdLen = SCSI_CDB_LEN10;
             break;
         case SCSI_OPCODE_GRP_16B:
-            cmbLen = SCSI_CDB_LEN16;
+            cmdLen = SCSI_CDB_LEN16;
             break;
         case SCSI_OPCODE_GRP_12B:
-            cmbLen = SCSI_CDB_LEN12;
+            cmdLen = SCSI_CDB_LEN12;
             break;
         default:
             log();
-            cmbLen = -1;
+            cmdLen = -1;
             break;
     }
 
-   return cmbLen;
+   return cmdLen;
 }
 
 /**
@@ -203,39 +203,32 @@ S32 simScsiCdbLenParse(U8 *cmbBuf)
  * @param   cmbBuf [i], CDB命令buff
  * @return   >0:解析CDB长度， <0:解析CDB长度错误
  */
-S32 simScsiCdbXferParse(U8 *cmdBuf, )
-{
-    S32 cmbLen;
-    U32 XferLen;
-    S32 ret;
-    switch (SCSI_OPCODE_GRP(cmbBuf[0])) {
+S32 simScsiCdbXferLenParse(U8 *cmdBuf, U32 *pXferLen)
+{  
+    S32  ret = 0;
+    
+    switch (SCSI_OPCODE_GRP(cmdBuf[0])) {
         case SCSI_OPCODE_GRP_6B:
-            XferLen = cmdBuf[4];
+            *pXferLen = cmdBuf[4] & 0xFF;
             break;
         case SCSI_OPCODE_GRP_10B1:
         case SCSI_OPCODE_GRP_10B2:
-            ret = simBigLittleSwap(cmdBuf + 7, &XferLen, 2, sizeof(XferLen);
-            if (ret <0) {
-                XferLen = -1;
-            }
+            *pXferLen = SWAP16_BIG2LITTLE(cmdBuf + 7);
+            
             break;
         case  SCSI_OPCODE_GRP_12B:
-            ret = simBigLittleSwap(cmdBuf + 6, &XferLen, 4, sizeof(XferLen);
-            if (ret <0) {
-                XferLen = -1;
-            }
+            *pXferLen = SWAP32_BIG2LITTLE(cmdBuf + 6);
             break;
         case SCSI_OPCODE_GRP_16B:
-            ret = simBigLittleSwap(cmdBuf + 10, &XferLen, 4, sizeof(XferLen);
-            if (ret <0) {
-                XferLen = -1;
-            }
+            *pXferLen = SWAP32_BIG2LITTLE(cmdBuf + 10);
             break;
         default:
-            XferLen = -1;
+            ret = -1;
+            log();
+            *pXferLen = -1;
+            break;
     }
-    
-end:
-    return ret;    
+
+    return ret
 }
 

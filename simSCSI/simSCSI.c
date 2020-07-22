@@ -17,27 +17,39 @@
  * @param   sense [in], sense定义
  * @return   =>0:成功， <0:失败
  */
-S32 simScsiReqSenseBuild(SimScsiRequest *pReq, SimScsiSense_t sense)
+S32 simScsiReqSenseBuild(SimScsiRequest *pReq, SimScsiSense_t sense, Bool 
+        isFixed)
 {
     S32 ret;
-    U8  buf[SCSI_SENSE_LEN] = 0;
-    U8 *pOutBuf = pReq->sense;   
+    U8  buf[SCSI_SENSE_LEN] = {0};
+    U8 *pOutBuf = pReq->sense;
+    S32 len;
     
-    simSCSICheckPtr(pReq);
+    if (0 != simSCSICheckPtr(pReq)) {
+        ret = -1;
+        goto end;
+    }
 
-    buf[0] = 0x70;
-    buf[2] = sense.key;
-    buf[7] = 10;
-    buf[12] = sense.asc;
-    buf[13] = sense.ascq;
+    if (SIM_TURE == isFixed) {
+        buf[0] = 0x70;
+        buf[2] = sense.key;
+        buf[7] = 10;
+        buf[12] = sense.asc;
+        buf[13] = sense.ascq;
+        len = SCSI_SENSE_FIX_LEN;
+    } else {
+        buf[0] = 0x72;
+        buf[1] = sense.key;
+        buf[2] = sense.asc;
+        buf[3] = sense.ascq;
+        len = SCSI_SENSE_STD_LEN;
+    }
     
-    memcpy(pOutBuf, buf, SCSI_SENSE_LEN);
-
+    memcpy(pOutBuf, buf, len);
     ret = 0;
 end:
     return ret;
 }
-
 
 /**
  * @brief   SCSI解析xfer长度 
@@ -48,14 +60,16 @@ static S32 simScsiXferLenParse(SimSCSIDevice *pDev, SimScsiCmd_t *pCmd,
         U8 *cmbBuf)
 {
     S32 ret = 0;
-    ret = simScsiCdbXferParse(cmbBuf, &pCmd->xferLen);
-    if (pCmd->xferLen)
-
+    ret = simScsiCdbXferLenParse(cmbBuf, &pCmd->xferLen);
+    if (0 > ret) {
+        log();
+        goto end;
+    }
     
     switch (cmbBuf[0]) {
-        case TEST_UNIT_READY:       
+        case TEST_UNIT_READY:
         case START_STOP:
-        case SET_CAPACITY:        
+        case SET_CAPACITY:
             pCmd->xferLen = 0;
             break;
         case VERIFY_10:
@@ -110,9 +124,11 @@ S32 simScsiCdbParse(SimSCSIDevice *pDev, SimScsiCmd_t *pCmd, U8 *pDarCdb)
     S32 ret;   
     S32 len;
     
-    simSCSICheckPtr(pDev);
-    simSCSICheckPtr(pCmd);
-    simSCSICheckPtr(pDarCdb);
+    if (0 != simSCSICheckPtr(pDev) || 0 != simSCSICheckPtr(pCmd) ||
+        0 != simSCSICheckPtr(pDarCdb)) {
+         ret = -1;
+         goto end;
+    }
 
     len = simScsiCdbLenParse(pDarCdb);
     if (0 > len) {
@@ -125,7 +141,7 @@ S32 simScsiCdbParse(SimSCSIDevice *pDev, SimScsiCmd_t *pCmd, U8 *pDarCdb)
     pCmd->cmdLen = len;
     
     ret = simScsiXferLenParse(pDev, pCmd, pDarCdb);
-    if (0 > ret) {        
+    if (0 > ret) {
         log();
         ret = -1;
         goto end;

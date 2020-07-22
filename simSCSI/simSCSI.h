@@ -14,6 +14,13 @@
 
 #define SCSI_CMD_BUFF_SIZE 16
 
+///< SCSI SENSE DATA异常sense配置关键值
+typedef struct SimScsiSense {
+   U8 key;   ///< sense key
+   U8 asc;   ///< sense asc
+   U8 ascq;  ///< sense ascq
+} SimScsiSense_t;
+
 ///< SCSI数据传输方向
 typedef enum SimScsiXferMode {
     SCSI_XFER_NOEXCHANGE,         ///< 无数据交换，例:TEST_UNIT_READY …
@@ -67,14 +74,14 @@ typedef struct SimScsiRequest {
 
 ///< SCSI消息处理回调函数组定义
 typedef struct SimScsiReqOps {
-void (*freeReqIov)(SimScsiRequest_t *req);   ///< 释放命令发送时申请的ioBase空间
-S32  (*sendCmd)(SimScsiRequest_t *req);      ///< 模拟SCSI CDB命令处理流程
-void (*readData)(SimScsiRequest_t *req);     ///< SCSI 数据读
-void (*writeData)(SimScsiRequest_t *req);    ///< SCSI 数据写
-U8  *(*getReqIov)(SimScsiRequest_t *req);    ///< 获取命令的ioBase地址
+    void (*freeReqIov)(SimScsiRequest_t *req);   ///< 释放命令申请的数据缓存空间
+    S32  (*sendCmd)(SimScsiRequest_t *req);      ///< 模拟SCSI CDB命令处理流程
+    void (*readData)(SimScsiRequest_t *req);     ///< SCSI 数据读
+    void (*writeData)(SimScsiRequest_t *req);    ///< SCSI 数据写
+    U8  *(*getReqIov)(SimScsiRequest_t *req);    ///< 获取命令的ioBase地址
 };
 
-S32 simScsiCdbParse(SimSCSIDevice *pDev, SimSCSI *pCmd, U8 *pDarCdb );
+S32 simScsiCdbParse(SimSCSIDevice *pDev, SimScsiCmd_t *pCmd, U8 *pDarCdb);
 
 
 
