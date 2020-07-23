@@ -3,18 +3,10 @@
 #include <stdint.h>
 #include <unistd.h>
 
-/* Macro definitions ---------------------------------------------------------*/
-/* Type definitions ----------------------------------------------------------*/
-/* Variable declarations -----------------------------------------------------*/
-/* Variable definitions ------------------------------------------------------*/
-/* Function declarations -----------------------------------------------------*/
-/* Function definitions ------------------------------------------------------*/
-
-
 
 #define SWAP16_BIGXLITTLE(px) \
-    ((*(uint16_t*)px & 0xFF) << 8 |\
-     (*(uint16_t*)px & 0xFF00) >> 8)
+    ((*(uint16_t*)px & 0xFF << 0) << 8 |\
+     (*(uint16_t*)px & 0xFF << 8) >> 8)
 
 #define SWAP32_BIGXLITTLE(px) \
     (((*(uint32_t*)px & (0xFF <<  0)) << 24) | \

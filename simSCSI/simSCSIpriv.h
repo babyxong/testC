@@ -215,27 +215,90 @@
 #define SWAP32_LITTLE2BIG(pX)   SWAP32_BIGXLITTLE(pX)
 #define SWAP64_BIG2LITTLE(pX)   SWAP64_BIGXLITTLE(pX)
 #define SWAP64_LITTLE2BIG(pX)   SWAP64_BIGXLITTLE(pX)
+
 /**
  * @brief   指针参数校验
- * @param   ptr [in],
+ * @param   ptr [in],p
  */
-static inline S32 simSCSICheckPtr(void *ptr)
-{    
-    if (NULL == ptr) {
-        printf("ptr is Nul !\n");
-        log();
-        return -1;
+#define SIM_CHECK_PTR(p) \
+        {\
+            (NULL == p)\
+            log();
+        }
+        
+
+
+/**
+ * @brief   模拟平台二期支持的CDB命令
+ * @param   Opcode [in],
+ * @return  0:支持， <0:不支持
+ */
+static inline S32 simSCSIOpcodeIsSupport(U8 Opcode)
+{
+    S32 ret;
+    switch (Opcode) {
+        case TEST_UNIT_READY:
+        case INQUIRY:
+        case MODE_SENSE:
+        case MODE_SENSE_10:
+        case MODE_SELECT:
+        case MODE_SELECT_10;
+        case START_STOP:
+        case READ_CAPACITY_10:
+        case REQUEST_SENSE:
+///<        case SYNCHRONIZE_CACHE:
+///<        case SEEK_10:
+        case UNMAP:
+        case WRITE_SAME_10:
+        case WRITE_SAME_16:
+        case VERIFY_10:
+        case VERIFY_12:
+        case VERIFY_16:
+        case READ_6:
+        case READ_10:
+        case READ_12:
+        case READ_16:
+        case WRITE_6:
+        case WRITE_10:
+        case WRITE_12:
+        case WRITE_16:
+        case WRITE_VERIFY_10:
+        case WRITE_VERIFY_12:
+        case WRITE_VERIFY_16:
+        case REPORT_LUNS:
+            ret = 0;
+            break;
+        default:
+            ret = -1;
+            break;
     }
-    return 0;
+    
+    return ret;
 }
 
 /**
- * @brief   SCSI解析CDB长度
- * @param   cmbBuf [in], CDB命令buff
- * @param   pXferLen [out], 解析后的xfer长度
+ * @brief   SCSI解析xfer长度 
+ * @param   pDev [i], C
+ * @param   pCmd [i], CDB命令内部结构
+ * @param   cmbBuf [i], CDB命令buff
  * @return   >0:解析CDB长度， <0:解析CDB长度错误
  */
-S32 simScsiCdbXferLenParse(U8 *cmdBuf, U32 *pXferLen);
+S32 simScsiXferLenParse(SimSCSIDevice_t *pDev, SimSCSICmd_t *pCmd, U8 *cmdBuf);
+
+/**
+ * @brief   SCSI解析CDB长度
+ * @param   cmbBuf [i], CDB命令buff
+ * @return   >0:解析CDB长度， <0:解析CDB长度错误
+ */
+S32 simScsiCdbLenParse(U32 *pCmdLen, U8 *cmdBuf);
+
+/**
+ * @brief   SCSI解析数据传输模式解析
+ * @param   cmbBuf [i], CDB命令buff
+ @param   cmbBuf [i], CDB命令buff
+ * @return   >=0:解析CDB长度， <0:解析CDB长度错误
+ */
+SimSCSIXferMode_t simScsiXferModeParse(SimSCSICmd_t *pCmd, U8 *cmdBuf);
 
 
 #endif ///< __SIM_SCSI_PRIV_H__

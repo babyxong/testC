@@ -17,7 +17,7 @@
  * @param   sense [in], sense定义
  * @return   =>0:成功， <0:失败
  */
-S32 simScsiReqSenseBuild(SimScsiRequest *pReq, SimScsiSense_t sense, Bool 
+S32 simScsiReqSenseBuild(SimScsiRequest *pReq, SimSCSISense_t sense, Bool 
         isFixed)
 {
     S32 ret;
@@ -52,107 +52,48 @@ end:
 }
 
 /**
- * @brief   SCSI解析xfer长度 
- * @param   cmbBuf [i], CDB命令buff
- * @return   >0:解析CDB长度， <0:解析CDB长度错误
- */
-static S32 simScsiXferLenParse(SimSCSIDevice *pDev, SimScsiCmd_t *pCmd, 
-        U8 *cmbBuf)
-{
-    S32 ret = 0;
-    ret = simScsiCdbXferLenParse(cmbBuf, &pCmd->xferLen);
-    if (0 > ret) {
-        log();
-        goto end;
-    }
-    
-    switch (cmbBuf[0]) {
-        case TEST_UNIT_READY:
-        case START_STOP:
-        case SET_CAPACITY:
-            pCmd->xferLen = 0;
-            break;
-        case VERIFY_10:
-        case VERIFY_12:
-        case VERIFY_16:
-             if ((cmbBuf[1] & 2) == 0) {
-                pCmd->xferLen = 0;
-                } else if ((cmbBuf[1] & 4) != 0) {
-                        pCmd->xferLen = 1;
-                }
-            pCmd->xferLen *= pDev->blocksize;
-            break;
-        case WRITE_SAME_10:
-        case WRITE_SAME_16:
-            pCmd->xferLen = cmbBuf[1] & 1 ? 0 : pDev->blocksize;
-            break;
-        case READ_CAPACITY_10:
-            pCmd->xferLen = 8;
-            break;
-        case WRITE_6:
-            ///< 根据协议 WRITE_6 TRANSFER LENGTH  等于0表示256个块
-            if (pCmd->xferLen == 0) {
-                pCmd->xferLen = 256;
-            }
-        case READ_10:
-        case READ_12:
-        case READ_16:
-            pCmd->xferLen *= pDev->blocksize;
-            break;
-        case INQUIRY:
-            pCmd->xferLen = cmbBuf[4] | (cmbBuf[3] << 8);
-            break;
-        default:
-            log();
-            ret = -1;
-            break; 
-   }
-   
-end:
-   return ret;
-}
-
-/**
  * @brief   SCSI CDB(Command Descriptor Block)命令解析
  * @param   pDev [in], 模拟盘对象
  * @param   pCmd [out], 解析后的SCSI命令
  * @param   pDarCdb [in], DAL下发的DAR参数
  * @return   =>0:成功， <0:失败
  */
-S32 simScsiCdbParse(SimSCSIDevice *pDev, SimScsiCmd_t *pCmd, U8 *pDarCdb)
+S32 simScsiCdbParse(SimSCSIDevice *pDev, SimSCSICmd_t *pCmd, U8 *pDarCdb)
 {
-    S32 ret;   
-    S32 len;
-    
-    if (0 != simSCSICheckPtr(pDev) || 0 != simSCSICheckPtr(pCmd) ||
-        0 != simSCSICheckPtr(pDarCdb)) {
+    S32 ret = 0;
+
+    if (0 != SIM_CHECK_PTR(pDev) || 0 != simSCSICheckPtr(pCmd) ||
+        0 != SIM_CHECK_PTR(pDarCdb)) {
          ret = -1;
          goto end;
     }
-
-    len = simScsiCdbLenParse(pDarCdb);
-    if (0 > len) {
-        log();
-        ret = -1;
-        goto end;
-
-    }
-
-    pCmd->cmdLen = len;
     
-    ret = simScsiXferLenParse(pDev, pCmd, pDarCdb);
+    ret = simSCSIOpcodeIsSupport(pDarCdb[0]);
+    if (0 > ret)
+    {
+        log();
+        goto end;
+    }
+    
+    ret = simScsiCdbLenParse(&pCmd->cmdLen, pDarCdb);
     if (0 > ret) {
         log();
-        ret = -1;
         goto end;
     }
 
-    memcpy(pCmd->cmdBuf, pDarCdb, pCmd->cmdLen);
-    
-    
+    ret = simScsiXferLenParse(pDev, &pCmd->xferLen, pDarCdb);
+    if (0 > ret) {
+        log();
+        goto end;
+    }
 
-   
-end:  
+    pCmd->xferMode = simScsiXferModeParse(pCmd, pDarCdb);
+
+    pCmd->lba = simScsiLbaParse(pDarCdb);
+
+    memcpy(pCmd->cmdBuf, pDarCdb, pCmd->cmdLen);
+
+end:
     return ret;
 }
 
@@ -164,6 +105,13 @@ end:
 S32 simScsiReqRef(SimScsiRequest *pReq)
 {
     S32 ret;
+    
+    simSCSICheckPtr(pReq);
+
+
+   
+    
+    pReq->refCount++;
 
 end:     
     return ret;
