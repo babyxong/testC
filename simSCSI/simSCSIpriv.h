@@ -168,6 +168,7 @@
 #define ACA_ACTIVE           0x30
 #define TASK_ABORTED         0x40
 
+#define STATUS_INIT          (-1)
 #define STATUS_MASK          0x3e
 
 ///<SENSE KEYS
@@ -233,9 +234,9 @@
  * @param   Opcode [in],
  * @return  0:支持， <0:不支持
  */
-static inline S32 simSCSIOpcodeIsSupport(U8 Opcode)
+static inline Bool_t simScsiOpcodeIsSupport(U8 Opcode)
 {
-    S32 ret;
+    Bool_t ret;
     switch (Opcode) {
         case TEST_UNIT_READY:
         case INQUIRY:
@@ -275,6 +276,21 @@ static inline S32 simSCSIOpcodeIsSupport(U8 Opcode)
     
     return ret;
 }
+
+#define SIM_CHECK_PTR(ptr, ret, errMsg)\
+            if (NULL == ptr) { \
+                log(errMsg);\
+                return ret;
+            }
+            
+#define SIM_CHECK_PTR_NORET(ptr, errMsg)\
+            if (NULL == ptr) { \
+                log(errMsg);\
+                return;
+            }
+
+
+
 
 /**
  * @brief   SCSI解析xfer长度 

@@ -7,7 +7,7 @@
  * @brief    SCSI命令处理
  * @note     新增文件
  */ 
-
+#include <stdint.h>
 #include "simSCSI.h"
 #include "simSCSIpriv.h"
 
@@ -68,9 +68,8 @@ S32 simScsiCdbParse(SimSCSIDevice *pDev, SimSCSICmd_t *pCmd, U8 *pDarCdb)
          goto end;
     }
     
-    ret = simSCSIOpcodeIsSupport(pDarCdb[0]);
-    if (0 > ret)
-    {
+    ret = simScsiOpcodeIsSupport(pDarCdb[0]);
+    if (0 > ret) {
         log();
         goto end;
     }
@@ -93,7 +92,20 @@ S32 simScsiCdbParse(SimSCSIDevice *pDev, SimSCSICmd_t *pCmd, U8 *pDarCdb)
 
     memcpy(pCmd->cmdBuf, pDarCdb, pCmd->cmdLen);
 
+    log("pCmd param: cmdLen:%u, xferLen:%u, xferMode:%u, pCmd->lba:%llu", 
+            pCmd->cmdLen, pCmd->xferLen, pCmd->xferMode, pCmd->lba);
+
 end:
+    return ret;
+}
+
+
+static S32 simScsiReqCheckRef(U32 reqRefCount)
+{
+    S32 ret = 0;
+    if (0 >= reqRefCount) {
+       ret = -1;
+    }
     return ret;
 }
 
@@ -104,16 +116,19 @@ end:
  */
 S32 simScsiReqRef(SimScsiRequest *pReq)
 {
-    S32 ret;
+    S32 ret = 0;
     
-    simSCSICheckPtr(pReq);
+    simSCSICheckPtr(pReq);   
 
-
-   
+    if (0 != simScsiReqCheckRef(pReq->refCount)) {
+        log();
+        ret = -1;
+        goto end;
+    }
     
     pReq->refCount++;
-
-end:     
+    ret = 0;
+end:
     return ret;
 }
 
@@ -124,9 +139,27 @@ end:
  */
 S32 simScsiReqUnref(SimScsiRequest *pReq)
 {
-    S32 ret;
+    S32 ret = 0;
+    
+    simSCSICheckPtr(pReq); 
+    
+    if (0 != simScsiReqCheckRef(pReq->refCount)) {
+        log();
+        ret = -1;
+        goto end;
+    }
 
-end:     
+    if (0 == (--pReq->refCount)) {
+
+        if (NULL != pReq->ops->freeReqIov) {
+           pReq->ops->freeReqIov(pReq);
+        } else {
+            log();
+        }
+        SIM_MEM_ZFREE(pReq)
+    }
+    
+end:
     return ret;
 }
 
@@ -137,9 +170,35 @@ end:
  */
 S32 simScsiReqEnqueue(SimScsiRequest *pReq)
 {
-    S32 ret;
+    S32 ret = 0;
+ 
+    ///< qemu scsi_req_enqueue_internal by xuhong
+    ret = simScsiReqRef(pReq);  ///计数- 对应出队
+    if (0 > ret) {
+        log();
+        goto end;
+    }
+    
+    if (pReq->bus->info->get_sg_list) {
+        pReq->sgl = pReq->bus->info->get_sg_list(req);
+    } else {
+        pReq->sgl = NULL;
+    }
+    pReq->enqueued = SIM_TRUE;
 
-end:     
+    // QTAILQ_INSERT_TAIL(&pReq->dev->requests, req, next); 加链
+    ///<  scsi_req_enqueue_internal by xuhong 
+
+    simScsiReqRef(pReq);
+    if (NULL ==  pReq->ops->sendCmd) {
+        log();
+        ret = -1;
+        goto end;
+    }
+    ret = pReq->ops->sendCmd();
+    simScsiReqUnref(pReq);
+    
+end:
     return ret;
 }
 
@@ -150,8 +209,16 @@ end:
  */
 S32 simScsiReqDequeue(SimScsiRequest *pReq)
 {
-    S32 ret;
-
+    S32 ret = 0;
+    if (SIM_TURE == pReq->enqueued) {
+         //    QTAILQ_REMOVE(&req->dev->requests, req, next); 摘链
+         pReq->enqueued = SIM_FALSE;
+         simScsiReqUnref(pReq);
+         ret = 0;
+    } else {
+        log();
+        ret = -1;        
+    }
 end:     
     return ret;
 }
@@ -197,12 +264,44 @@ end:
  * @param   status [in/out], SCSI 命令处理上报status
  * @return   =>0:成功， <0:失败
  */
-S32 simScsiReqComplete(SimScsiRequest *pReq， S32 status)
+S32 simScsiReqComplete(SimScsiRequest *pReq, S32 status)
 {
     S32 ret;
-    /*
-        回调bus的结束分支
-    */
+
+    if (STATUS_INIT == pReq->status) {
+        log();
+        ret = -1;
+        goto end;
+    }        
+    pReq->status = status;
+    
+    if (pReq->senseLen > sizeof(pReq->sense)) {
+        log();
+        ret = -1;
+        goto end;
+    }
+    
+    if (GOOD == status) {
+        pReq->sense_len = 0；
+        pReq->pDev->sense_len = 0;
+        pReq->pDev->sense_is_ua = SIM_FALSE;
+    } else {
+        simMemCpy(pReq->pDev->sense, pReq->sense, pReq->senseLen);
+        pReq->pDev->sense_len = pReq->senseLen;
+        pReq->pDev->sense_is_ua = (pReq->ops == &reqops_unit_attention); ///< UA回调
+    }
+
+    simScsiClearUA(pReq);  ///< 清除UA
+    
+    simScsiReqRef(pReq);
+    simScsiReqDequeue(pReq);
+    if (NULL ==  pReq->pBus-busOps->comlete) {
+        log();
+        ret =-1;
+        goto end;
+    }    
+    pReq->pBus->busOps->comlete(pReq, pReq->status, pReq->dataLen);
+    simScsiReqUnref(pReq);
     
 end: 
     return ret;
@@ -215,12 +314,26 @@ end:
  * @param   pDarCdb [in], DAL下发的DAR参数
  * @return   !=NULL:成功， NULL:失败
  */
-SimScsiRequest *simScsiReqAlloc(const SimSCSIReqOps_t ops, SimSCSIDevice *pDev,
-        U8 *pDarCdb);
+static SimScsiRequest *simScsiReqAlloc(const SimSCSIReqOps_t *ops, 
+        SimSCSIDevice_t *pDev, U8 *pDarCdb)
 {
     SimScsiRequest *pReq;
+    SimSCSIBus *pBus = find_bus(pDev);  ///<
+
+    pReq = SIM_MEM_ZALLOC(sizeof(SimScsiRequest));
+    if (NULL == pReq) {
+        log()；
+        goto end;
+    }
+
+    pReq->refcount  = 1;
+    pReq->pBus      = pBus;
+    pReq->pDev      = pDev;
+    pReq->ops       = ops;
+    pReq->lun       = pDev->lun;
+    pReq->status    = -1;  
     
-    return NULL；
+end:
     return pReq;
 }
 
@@ -230,10 +343,55 @@ SimScsiRequest *simScsiReqAlloc(const SimSCSIReqOps_t ops, SimSCSIDevice *pDev,
  * @param   pDarCdb [in], DAL下分的DAR参数
  * @return   !=NULL:成功， NULL:失败
  */
-SimScsiRequest *simScsiReqNew(SimSCSIDevice *pDev, U8 *pDarCdb)
-{
-    SimScsiRequest *pReq;
+SimScsiRequest *simScsiReqNew(SimSCSIDevice_t *pDev, U8 *pDarCdb)
+{   
+    SimScsiRequest *pReq = NULL;
+    SimSCSIBus_t   *pBus = NULL;    
+    SimSCSICmd_t    cmd  = {0};
+    const SimSCSIBusOps_t   *ops = NULL;
+    S32 ret;
     
+    SIM_CHECK_PTR(pDev, NULL, "   ");
+    SIM_CHECK_PTR(pDarCdb, NULL, "   ");
+    
+    if ((pDev->unit_attention.key == UNIT_ATTENTION ||
+         pBus->unit_attention.key == UNIT_ATTENTION) &&
+        (pDarCdb[0] != INQUIRY &&
+         pDarCdb[0] != REPORT_LUNS &&
+         pDarCdb[0] != GET_CONFIGURATION &&
+         pDarCdb[0] != GET_EVENT_STATUS_NOTIFICATION &&
+         !(pDarCdb[0] == REQUEST_SENSE && pDev->sense_is_ua))) {
+         
+        ops = simScsiReqOpsUaGet();
+    } else {
+        ops = NULL;
+    }    
+
+    ret = simScsiCdbParse(pDev, &cmd, pDarCdb);
+    if (0 > ret) {
+        log();
+        ops = simScsiReqOpsErrOpcodeGet();
+    } else {
+        if (UINT32_MAX < cmd.xferLen) {
+            ops = simScsiReqOpsErrFieldGet();
+        } else if (NULL == ops) {
+           ops = simScsiReqOpsMatch(pDarCdb[0]);      
+        } else {
+           pReq = NULL;
+           log();
+           goto end;
+        } 
+    }
+
+    pReq = simScsiReqAlloc(ops, pDev, pDarCdb);   
+    SIM_CHECK_PTR(pReq, NULL, "   ");
+    
+    simMemCpy(pReq->cmd, cmd, sizeof(pReq->cmd));
+    pReq->dataLen = pReq->cmd.xferLen;
+    pReq->pDev = pDev; 
+
+    
+end:    
     return pReq;
 }
 
@@ -244,9 +402,28 @@ SimScsiRequest *simScsiReqNew(SimSCSIDevice *pDev, U8 *pDarCdb)
  */
 S32 simScsiReqDataProc(SimScsiRequest *pReq)
 {
-    S32 ret;
+    S32 ret = 0;
+    SIM_CHECK_PTR(pReq, -1, "   ");
+    SIM_CHECK_PTR(pReq->ops,-1," ");
+    SIM_CHECK_PTR(pReq->ops->readData,-1," ");
+    SIM_CHECK_PTR(pReq->ops->writeData,-1," ");
+
+    if (SIM_TRUE == pReq->ioCanceled) {
+        log();
+        ret = -1;
+        goto end;
+    }
     
-   
+    if (SCSI_XFER_TO_DEV == pReq->cmd.xferMode) {        
+        pReq->ops->writeData(pReq);
+    } else if (SCSI_XFER_FROM_DEV == pReq->cmd.xferMode) {
+        pReq->ops->readData(pReq);
+    } else {
+        log();
+        ret = -1;
+        goto end;
+    }
+
 end:     
     return ret;
 }

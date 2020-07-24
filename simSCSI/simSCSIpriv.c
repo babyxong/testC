@@ -11,6 +11,14 @@
 #include "simSCSIpriv.h"
 #include "simSCSIpub.h"
 
+#ifndef MIN
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#endif
+#ifndef MAX
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+#endif
+
+
 ///<  No sense data available 
 const struct SimSCSISense_t sense_code_NO_SENSE = {
     .key = NO_SENSE , .asc = 0x00 , .ascq = 0x00
@@ -166,6 +174,180 @@ const struct SimSCSISense_t sense_code_SPACE_ALLOC_FAILED = {
     .key = DATA_PROTECT, .asc = 0x27, .ascq = 0x07
 };
 
+static const SimSCSIReqOps_t  gReqInvaildOpcodeOps = {
+    .sendCmd = NULL;
+};
+
+static const SimSCSIReqOps_t gReqInvalidFieldOps = {
+    .sendCmd = NULL:
+};
+
+static const SimSCSIReqOps_t gReqUnitAttentionOps = {
+    .sendCmd = NULL:
+};
+
+
+static void simScsiCheckCondition(SimSCSIRequest_t *pReq, SimSCSISense_t sense)
+{
+    log("",pReq->lun, sense.key, sense.asc, sense.ascq);
+
+    simScsiReqSenseBuild(pReq, sense, SIM_TURE);
+    simScsiReqComplete(pReq, CHECK_CONDITION);
+}
+
+
+static void simScsiReqIovFree(SimSCSIRequest_t *pReq)
+{   
+    SIM_CHECK_PTR_NORET(pReq, "   ");
+    SIM_CHECK_PTR_NORET(pReq->iov.iov_base, "   ");
+
+    SIM_MEM_ZFREE(&pReq->iov.iov_base);
+    pReq->iov.iov_base = NULL;
+    
+    return ;
+}
+
+
+static const S32 simScisDiskEmuSendCmd(SimSCSIRequest_t *pReq)
+{   
+    U8 outbuf;
+    U64 sectorNum;
+    int dateBuflen;
+    U8 opcode = pReq->cmd.cmdBuf[0];
+    
+    
+    switch (opcode) {
+        ///< 普通管理查询控制命令不涉及盘数据
+        case INQUIRY:
+        case MODE_SENSE:
+        case MODE_SENSE_10:
+        case RESERVE:
+        case RESERVE_10:
+        case RELEASE:
+        case RELEASE_10:
+        case START_STOP:
+        case ALLOW_MEDIUM_REMOVAL:
+        case GET_CONFIGURATION:
+        case GET_EVENT_STATUS_NOTIFICATION:
+        case MECHANISM_STATUS:
+        case REQUEST_SENSE:
+            break;
+            
+        default:         
+            if (!blk_is_available(s->qdev.conf.blk)) { ///< gouxiaofei 提供接口
+                scsi_check_condition(r, SENSE_CODE(NO_MEDIUM));
+            }
+            xferlen =0;
+            goto end;          
+    }
+
+    if (pReq->cmd.xferLen > 0xFFFF) {
+        goto illegalRequest;
+    }
+
+    dateBuflen = MAX(4096, pReq->cmd.xferLen);
+
+    if (NULL == pReq->iov.base) {
+        pReq->iov.base = 
+    }
+    
+
+
+end:
+    return xferlen;
+    
+illegalRequest:    
+    simScsiCheckCondition(pReq,SENSE_CODE(INVALID_FIELD));
+    xferlen = 0;
+    goto end;    
+}
+
+
+static const SimSCSIReqOps_t gSimScsiEmuReqOps = {
+    .freeReqIov = simScsiReqIovFree,
+    .sendCmd    = simScsiDiskEmuSendCmd,
+    .readData   = simScsiDiskEmuRead,
+    .writeData  = simScsiDiskEmuWrite,
+    .getReqIov  = simScsiReqIovGet,
+}
+static const SimSCSIReqOps_t gSimScsiDmaReqOps = {
+    .freeReqIov = simScsiReqIovFree,
+    .sendCmd    = simScsiDiskDmaSendCmd,
+
+    .getReqIov = simScsiReqIovGet,
+}
+
+
+static const SimSCSIReqOps_t *const gScsiReqOpsTable[256] = {
+    [TEST_UNIT_READY]                 = &gSimScsiEmuReqOps,
+    [INQUIRY]                         = &gSimScsiEmuReqOps,
+    [MODE_SENSE]                      = &gSimScsiEmuReqOps,
+    [MODE_SENSE_10]                   = &gSimScsiEmuReqOps,
+    [START_STOP]                      = &gSimScsiEmuReqOps,
+    [READ_CAPACITY_10]                = &gSimScsiEmuReqOps,   
+    [REQUEST_SENSE]                   = &gSimScsiEmuReqOps,
+    [SYNCHRONIZE_CACHE]               = &gSimScsiEmuReqOps,
+    [SEEK_10]                         = &gSimScsiEmuReqOps,
+    [MODE_SELECT]                     = &gSimScsiEmuReqOps,
+    [MODE_SELECT_10]                  = &gSimScsiEmuReqOps,
+    [UNMAP]                           = &gSimScsiEmuReqOps,
+    [WRITE_SAME_10]                   = &gSimScsiEmuReqOps,
+    [WRITE_SAME_16]                   = &gSimScsiEmuReqOps,
+    [VERIFY_10]                       = &gSimScsiEmuReqOps,
+    [VERIFY_12]                       = &gSimScsiEmuReqOps,
+    [VERIFY_16]                       = &gSimScsiEmuReqOps,
+    [REPORT_LUNS]                     = &gSimScsiEmuReqOps,
+
+    [READ_6]                          = &gSimScsiDmaReqOps,
+    [READ_10]                         = &gSimScsiDmaReqOps,
+    [READ_12]                         = &gSimScsiDmaReqOps,
+    [READ_16]                         = &gSimScsiDmaReqOps,
+    [WRITE_6]                         = &gSimScsiDmaReqOps,
+    [WRITE_10]                        = &gSimScsiDmaReqOps,
+    [WRITE_12]                        = &gSimScsiDmaReqOps,
+    [WRITE_16]                        = &gSimScsiDmaReqOps,
+    [WRITE_VERIFY_10]                 = &gSimScsiDmaReqOps,
+    [WRITE_VERIFY_12]                 = &gSimScsiDmaReqOps,
+    [WRITE_VERIFY_16]                 = &gSimScsiDmaReqOps,
+};
+
+
+
+SimSCSIReqOps_t *simScsiReqOpsUaGet(void)
+{
+    return &gReqUnitAttentionOps;
+}
+
+SimSCSIReqOps_t *simScsiReqOpsErrFieldGet(void)
+{
+    return &gReqInvalidFieldOps;
+}
+
+SimSCSIReqOps_t *simScsiReqOpsErrOpcodeGet(void)
+{
+    return &gReqInvaildOpcodeOps;
+}
+
+SimSCSIReqOps_t *simScsiReqOpsMatch(U8 opcode)
+{
+    S32 ret = 0;
+    SimSCSIReqOps_t *pOps = NULL;
+    
+    ret = simScsiOpcodeIsSupport(opcode);
+    if (SIM_FALSE == ret) {
+        pOps = &gReqInvaildOpcodeOps;
+        goto end;
+    }
+
+    pOps = &gScsiReqOpsTable[opcode];
+    
+end:
+    return pOps;
+}
+
+
+
+
 /**
  * @brief   SCSI解析CDB长度
  * @param   cmbBuf [i], CDB命令buff
@@ -209,7 +391,7 @@ static S32 simScsiCdbXferLenParse(U8 *cmdBuf, U64 *pXferLen)
     S32  ret = 0;
     
     switch (SCSI_OPCODE_GRP(cmdBuf[0])) {
-        case SCSI_OPCODE_GRP_6B:
+        case SCSI_OPCODE_GRP_6B:           
             *pXferLen = cmdBuf[4] & 0xFF;
             break;
         case SCSI_OPCODE_GRP_10B1:
@@ -237,7 +419,7 @@ static S32 simScsiCdbXferLenParse(U8 *cmdBuf, U64 *pXferLen)
  * @param   cmbBuf [i], CDB命令buff
  * @return   >0:解析CDB长度， <0:解析CDB长度错误
  */
-S32 simScsiXferLenParse(SimSCSIDevice *pDev, U64 *pXferLen, U8 *cmdBuf)
+S32 simScsiXferLenParse(SimSCSIDevice_t *pDev, U64 *pXferLen, U8 *cmdBuf)
 {
     S32 ret = 0;
     
@@ -293,7 +475,7 @@ S32 simScsiXferLenParse(SimSCSIDevice *pDev, U64 *pXferLen, U8 *cmdBuf)
             *pXferLen *= pDev->blocksize;
             break;
         case INQUIRY:
-            *pXferLen = SWAP16_BIG2LITTLE(&cmdBuf[3]);
+            *pXferLen = SWAP16_BIG2LITTLE(cmdBuf + 3);
             break;
             
         default:
@@ -393,7 +575,7 @@ U64 simScsiLbaParse(U8 *cmdBuf)
 
     switch (SCSI_OPCODE_GRP(cmdBuf[0])) {        
         case SCSI_OPCODE_GRP_6B:
-            ///< SCSI协议描述6字节的CDB可能包含21bit的LBA字段,含第二字节后5bit
+            ///< SCSI协议描述6字节的CDB可能包含21bit的LBA字段, 即CDB2后5bit
             lba = SWAP32_BIG2LITTLE(cmdBuf) & 0x1FFFFF;
             break;
         case SCSI_OPCODE_GRP_10B1:
@@ -411,4 +593,8 @@ U64 simScsiLbaParse(U8 *cmdBuf)
     }
     return lba;
 }
+
+
+
+
 

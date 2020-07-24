@@ -14,11 +14,16 @@
 
 #define SCSI_CMD_BUFF_SIZE 16
 
+typedef struct SimScsiReqOps SimSCSIReqOps_t;
+typedef struct SimSCSIBus SimSCSIBus_t;
+typedef struct SimScsiRequest SimSCSIRequest_t;
+
 ///< SCSI SENSE DATA异常sense配置关键值
 typedef struct SimScsiSense {
    U8 key;   ///< sense key
    U8 asc;   ///< sense asc
    U8 ascq;  ///< sense ascq
+   U8 reserve;
 } SimSCSISense_t;
 
 ///< SCSI数据传输方向
@@ -43,17 +48,34 @@ typedef struct IOvector {
     size_t iovLen; ///< 数据缓冲区长度
 }IOvector_t;
 
-typedef struct SimScsiReqOps SimScsiReqOps_t;
+typedef struct SimSCSIBusOps {
+    S32 (*parseCdb) (SimSCSIDevice_t *pDev, SimSCSICmd_t* pCmd, U8 *pDarCdb);
+    S32 (*transferData) (SimSCSIRequest_t *pReq, U64 xferLen);
+    S32 (*complete) (SimSCSIRequest_t *pReq, S32 reqStatus, U64 xferLen);
+    S32 (*cancel) (SimSCSIRequest_t *pReq);
+    S32 (*sglGet) (SimSCSIRequest_t *pReq);
+}SimSCSIBusOps_t;
+
+struct SimSCSIBus {
+    SimSCSISense_t unit_attention;
+    const S32 tcq;
+    const S32 maxChannel;
+    const S32 maxTarget;
+    const S32 maxLun;
+    const SimSCSIBusOps_t busOps;
+};
+
+
 
 ///< SCSI请求数据结构
-typedef struct SimScsiRequest {
+struct SimScsiRequest {
     SimSCSIBus_t *pBus; ///< SCSI BUS结构体
     struct DeviceAccessRequest *pDar; ///< 保存DAR结构指针
     /** 保存ScsiDevice结构指针，预期通过
      *  DAR channelID，targetDeviceID，LUN ID(0)找到对应的device
      */
     struct SimSCSIDevice *pDev;
-    const SimScsiReqOps_t *ops; ///< CDB命令对应的处理函数回调组
+    const SimSCSIReqOps_t *ops; ///< CDB命令对应的处理函数回调组
     U32 refCount;       ///< req引用计数
     U32 lun;            ///< 逻辑单元数(模拟盘为0)
     U32 status;         ///< CDB命令返回处理结构，结束时回调到DAR的 scsiStatus
@@ -67,10 +89,17 @@ typedef struct SimScsiRequest {
     bool retry;         ///< IO错误操作重试标志
     bool dmaStarted;    ///< DMA传输开始标志
     BlockAIOCB *aiocb;  ///< AIO刷盘的回调函数
-    //QTAILQ_ENTRY(SimSCSIRequest_t) next;  ///< 数据链表
-    SimDiskReq_t diskReq;            ///< 模拟盘请求数据结构
+    struct list_head *sgl;
+
+    U64 sector;
+    U32 sectorCount;
+    U32 bufLen;
+    bool started;
+    bool needFuaEmualtion;
+    
+    struct list_head;
     IOvector_t iov;     ///< 数据IOV结构
-}SimSCSIRequest_t;
+};
 
 ///< SCSI消息处理回调函数组定义
 typedef struct SimScsiReqOps {
@@ -84,5 +113,6 @@ typedef struct SimScsiReqOps {
 S32 simScsiCdbParse(SimSCSIDevice *pDev, SimSCSICmd_t *pCmd, U8 *pDarCdb);
 
 
+void scsi_req_data(SCSIRequest *req, int len);
 
 #endif ///<__SIM_SCSI_H__
