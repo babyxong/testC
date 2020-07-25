@@ -202,19 +202,225 @@ static void simScsiReqIovFree(SimSCSIRequest_t *pReq)
     SIM_CHECK_PTR_NORET(pReq->iov.iov_base, "   ");
 
     SIM_MEM_ZFREE(&pReq->iov.iov_base);
-    pReq->iov.iov_base = NULL;
-    
     return ;
 }
 
+static U8 *simScsiReqIovGet(SimSCSIRequest_t *pReq)
+{
+    return pReq->iov.base;
+}
 
-static const S32 simScisDiskEmuSendCmd(SimSCSIRequest_t *pReq)
-{   
-    U8 outbuf;
-    U64 sectorNum;
-    int dateBuflen;
-    U8 opcode = pReq->cmd.cmdBuf[0];
+
+void simScsiReqDataXfer(SimSCSIRequest_t *pReq, U32 len)
+{
+    U8 *buf;
+    if (pReq->ioCanceled) {
+        log(pReq->pDev->id, pReq->lun, pReq->tag, len);
+        goto end;
+    }
+    log(req->dev->id, req->lun, req->tag, len);    
+
+    if (SCSI_XFER_NOEXCHANGE == pReq->cmd.xferMode) {
+        log();
+        ///< 考虑BUG_ON
+        BUG_ON();
+    }
     
+    if (NULL == pReq->sgl) {
+        pReq->dataLen -= len;
+          req->bus->info->transfer_data(req, len);  ///Bus回调
+        return;
+    }
+    
+
+    if (SIM_TURE == pReq->dmaStarted ){
+        log();
+        bug_on();
+        got end; ///< 考虑BUG_ON
+        
+    }
+    
+    pReq->dmaStarted = SIM_TURE;
+
+    buf = pReq->iov.base);
+    if (SCSI_XFER_FROM_DEV == pReq->cmd.xferMode) {
+        pReq->dataLen = dma_buf_read(buf, len, pReq->sg); ///晓飞提供接口
+    } else {
+         pReq->dataLen = dma_buf_write(buf, len, pReq->sg);///晓飞提供接口
+    }
+    
+    simScsiReqDataProc(pReq);
+    
+end :
+    return;
+}
+
+static void simScsiDiskEmuRead(SimSCSIRequest_t *pReq)
+{
+    U32 bufLen = pReq->iov.iovLen;
+
+    if (0 != bufLen) {
+        log("", bufLen);
+        pReq->iov.iovLen =0;
+        pReq->started = SIM_TRUE;
+        
+        simScsiReqDataXfer(pReq , bufLen);        
+        goto end;
+    }
+
+    simScsiReqComplete(pReq, GOOD);
+    
+end:
+    return;
+}
+
+static void simScsiDiskEmuWrite(SimSCSIRequest_t *pReq)
+{
+    U32 buflen;
+    U8  opcode = pReq->cmd.cmdBuf[0];
+    
+    if (0 != pReq->iov.len) {
+        buflen = r->iov.iov_len;
+        log("",  buflen);
+        pReq->iov.len = 0;
+        simScsiReqDataXfer(pReq, buflen);
+        goto end;
+    }
+
+    switch (opcode) {
+        case MODE_SELECT:
+        case MODE_SELECT_10:
+            /* This also clears the sense buffer for REQUEST SENSE.  */
+            ///< scsi_disk_emulate_mode_select(r, r->iov.iov_base);
+            break;
+
+        case UNMAP:
+            ///< scsi_disk_emulate_unmap(r, r->iov.iov_base);
+            break;
+
+        case VERIFY_10:
+        case VERIFY_12:
+        case VERIFY_16:
+            #if 0
+            if (r->req.status == -1) {
+                scsi_check_condition(r, SENSE_CODE(INVALID_FIELD));
+            }
+            break;
+            #endif
+        case WRITE_SAME_10:
+        case WRITE_SAME_16:
+            ///< scsi_disk_emulate_write_same(r, r->iov.iov_base);
+            break;
+
+        default:
+            log();
+            break;
+    }
+    
+
+end:
+    return;    
+}
+
+
+static void simScsiDiskReadCompleteNoIo(SimSCSIRequest_t *pReq, int ret)
+{
+    U32 len;
+
+    if (NULL != pReq->aiocb) {
+        log();
+        bugOn();
+        goto end;
+    }  
+    
+    ///< scsi_disk_req_check_error 此处保留
+    
+    len = pReq->iov.len / 512;
+    pReq->sector += len;
+    pReq->sectorCount -= len;
+    
+    simScsiReqDataXfer(pReq, pReq->iov.len);
+
+end:
+    return;
+}
+
+///< scsi_do_read
+static simScsiDiskReadDo(SimSCSIRequest_t *pReq, S32 ret)
+{
+
+    if (NULL != pReq->aiocb) {
+        log();
+        bugOn();
+    }
+    
+    ///< scsi_disk_req_check_error 此处保留
+
+    
+    simScsiReqRef(pReq);
+
+    if (pReq->sgl) {
+
+    } else {
+
+    }
+
+    simScsiReqUnref(pReq);
+    
+}
+
+static void simScsiDiskDataRead(SimSCSIRequest_t *pReq)
+{
+    Bool_t isFirst;
+    
+    if (pReq->sectorCount == 0) {
+        /* This also clears the sense buffer for REQUEST SENSE.  */
+        simScsiReqComplete(pReq, GOOD);
+        goto end;
+    }
+    
+    if (NULL != pReq->aiocb) {
+        log();
+        bug_on();
+        goto end;
+    }
+
+    ///< 具有AIO操作的，所以引用加1, 在complete减1
+    simScsiReqRef(pReq);
+    
+    if (SCSI_XFER_TO_DEV == pReq->cmd.xferMode) {
+        simScsiDiskReadCompleteNoIo(pReq, -ENVAL);
+        goto end;
+    }
+
+    if (!blk_is_available(req->dev->conf.blk)) {
+        simScsiDiskReadCompleteNoIo(pReq, -ENOMEDIUM);
+        goto end;
+    }
+
+    /* fua模拟暂时不实现
+    isFirst = !pReq->started;    
+    pReq->started = SIM_TRUE; */
+
+    simScsiDiskReadDo(pReq, 0);
+    
+
+end:
+    return;
+}
+
+void simScsiDiskDataWrite(SimSCSIRequest_t *pReq)
+{
+    
+    
+}
+
+
+static S32 simScsiDiskEmuSendCmd(SimSCSIRequest_t *pReq)
+{   
+    U8 *outbuf;
+    U32 buflen;
+    U8  opcode = pReq->cmd.cmdBuf[0];    
     
     switch (opcode) {
         ///< 普通管理查询控制命令不涉及盘数据
@@ -234,8 +440,8 @@ static const S32 simScisDiskEmuSendCmd(SimSCSIRequest_t *pReq)
             break;
             
         default:         
-            if (!blk_is_available(s->qdev.conf.blk)) { ///< gouxiaofei 提供接口
-                scsi_check_condition(r, SENSE_CODE(NO_MEDIUM));
+            if (!blk_is_available(s->qdev.conf.blk)) { ///< gouxiaofei提供接口
+                simScsiCheckCondition(r, SENSE_CODE(NO_MEDIUM));
             }
             xferlen =0;
             goto end;          
@@ -245,21 +451,199 @@ static const S32 simScisDiskEmuSendCmd(SimSCSIRequest_t *pReq)
         goto illegalRequest;
     }
 
-    dateBuflen = MAX(4096, pReq->cmd.xferLen);
+    pReq->bufLen = MAX(4096, pReq->cmd.xferLen);
 
     if (NULL == pReq->iov.base) {
-        pReq->iov.base = 
+        pReq->iov.base = SIM_MEM_ZALLOC(pReq->bufLen);
+        if (NULL ==  pReq->iov.base) {
+            log();
+            buflen = 0;
+            goto end;
+        }        
+    }
+
+    buflen = pReq->cmd.xferLen;
+    outbuf = pReq->iov.base;
+
+    switch (opcode) {
+        case TEST_UNIT_READY:
+                ///< 调用晓飞接口
+            break;
+        case INQUIRY:
+            buflen = simDiskEmuInquiry(pReq, outbuf);
+            break;
+        case MODE_SENSE:
+        case MODE_SENSE_10:
+            buflen = simDiskEmuModeSen(pReq,outbuf);
+            if (buflen<0 ){
+                goto illegalRequest;
+            }
+            break;
+        case START_STOP:
+            buflen = simDiskEmuStartStop(pReq);
+            if (buflen < 0) {
+                log();
+            }
+            buflen = 0;
+            break;
+        case READ_CAPACITY_10:
+            buflen = simDiskEmuReadCapacity(pReq, outbuf);
+            break;
+        case REQUEST_SENSE:
+        
+            ///< 调用晓飞的接口
+
+            if (buflen < 0){
+                goto illegalRequest;
+            }                
+            break;
+        case SYNCHRONIZE_CACHE:
+            simScsiReqRef(pReq);
+            pReq->aiocb = blk_xiaofei();             
+            break;
+        case SEEK_10:
+            ///< 确认是否需要实现
+            break;
+        case MODE_SELECT:
+            ///< qemu没有实现，需要自己搞
+            log("", pReq->cmd.xferLen);
+            break;
+        case MODE_SELECT_10:
+            ///< qemu没有实现，需要自己搞
+            log("", pReq->cmd.xferLen);
+            break;
+        case VERIFY_10:
+        case VERIFY_12:
+        case VERIFY_16:     
+             ///< qemu没有实现，需要自己搞
+
+            ///CDB_2 BYCHK bit
+            if (pReq->cmd.cmdBuf[1] & 0x06) {
+                goto illegalRequest;
+            }             
+            break;
+        case WRITE_SAME_10:
+        case WRITE_SAME_16:
+             ///< qemu没有实现，需要自己搞
+                 log("", opcode, pReq->cmd.xferLen);
+             
+        default：
+            log();
+            simScsiCheckCondition(pReq, SENSE_CODE(INVALID_OPCODE));
+            buflen = 0;
+            goto end;
     }
     
+    pReq->iov.len = MIN(pReq->bufLen, pReq->cmd.xferLen);
+    if (0 == pReq->iov.len) {
+        simScsiReqComplete(pReq, GOOD);
+    }
 
+    buflen = pReq->iov.len;
 
 end:
-    return xferlen;
+    return buflen;
+
     
 illegalRequest:    
     simScsiCheckCondition(pReq,SENSE_CODE(INVALID_FIELD));
-    xferlen = 0;
-    goto end;    
+    
+zeroLen:
+    buflen = 0;
+    goto end;
+}
+
+static S32 simScsiDiskDmaSendCmd(SimSCSIRequest_t *pReq)
+{
+    U8 *outbuf;
+    U32 buflen = pReq->cmd.xferLen;
+    U8  opcode = pReq->cmd.cmdBuf[0]; 
+
+    if (!blk_is_available(s->qdev.conf.blk)) { ///< gouxiaofei提供接口
+        simScsiCheckCondition(pReq, SENSE_CODE(NO_MEDIUM));
+        goto zeroLen;
+    }
+
+    switch (opcode) {
+    case READ_6:
+    case READ_10:
+    case READ_12:
+    case READ_16:
+        log("",  r->req.cmd.lba, len);
+
+        if (pReq->pDev.scsi_version > 2 && (r->req.cmd.buf[1] & 0xe0)) {
+            goto illegalRequest;
+        }
+        if (!check_lba_range(s, r->req.cmd.lba, len)) {
+            goto illegal_lba;
+        }
+        
+        
+        pReq->sector = pReq->cmd.lba * (pReq->pDev.blocksize / 512);
+        pReq->sectorCount = buflen * (pReq->pDev.blocksize / 512);
+        break;
+
+    case WRITE_6:
+    case WRITE_10:
+    case WRITE_12:
+    case WRITE_16:
+    case WRITE_VERIFY_10:
+    case WRITE_VERIFY_12:
+    case WRITE_VERIFY_16:
+
+        if (blk_is_read_only(s->qdev.conf.blk)) {
+            goto writeProtected;
+        }
+
+        log("", (command & 0xe) == 0xe ? "And Verify " : "",
+                r->req.cmd.lba, len););
+        
+        ///直通下来：
+    case VERIFY_10:
+    case VERIFY_12:
+    case VERIFY_16:
+        if (pReq->pDev.scsi_version > 2 && (pReq.cmd.cmdBuf[1] & 0xe0)) {
+            goto illegalRequest;
+        }
+        if (!check_lba_range(s, r->req.cmd.lba, len)) {
+            goto illegal_lba;
+        }
+        pReq->sector = pReq->cmd.lba * (pReq->pDev.blocksize / 512);
+        pReq->sectorCount = pReq * (pReq->pDev.blocksize / 512);
+        break;
+    default:
+        log();
+        bug_on();
+        goto zeroLen;    
+    }
+    
+
+    //r->need_fua_emulation = sdc->need_fua_emulation(&r->req.cmd);
+    if (pReq->sectorCount == 0) {
+        simScsiReqComplete(pReq, GOOD);
+    }
+    
+    buflen = pReq->sectorCount * 512;   
+    
+end:
+    return buflen;
+    
+zeroLen:
+    buflen = 0
+    goto end; 
+
+illegalRequest:    
+    simScsiCheckCondition(pReq,SENSE_CODE(INVALID_FIELD));
+    goto zeroLen;
+
+illegalLba:
+    simScsiCheckCondition(r, SENSE_CODE(LBA_OUT_OF_RANGE));
+    goto zeroLen;
+
+writeProtected:
+    simScsiCheckCondition(r, SENSE_CODE(WRITE_PROTECTED));
+    goto zeroLen;
+
 }
 
 
@@ -273,8 +657,9 @@ static const SimSCSIReqOps_t gSimScsiEmuReqOps = {
 static const SimSCSIReqOps_t gSimScsiDmaReqOps = {
     .freeReqIov = simScsiReqIovFree,
     .sendCmd    = simScsiDiskDmaSendCmd,
-
-    .getReqIov = simScsiReqIovGet,
+    .readData   = simScsiDiskDataRead,
+    .writeData  = simScsiDiskDataWrite,
+    .getReqIov  = simScsiReqIovGet,
 }
 
 

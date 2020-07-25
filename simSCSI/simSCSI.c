@@ -326,7 +326,7 @@ static SimScsiRequest *simScsiReqAlloc(const SimSCSIReqOps_t *ops,
         goto end;
     }
 
-    pReq->refcount  = 1;
+    pReq->refCount  = 1;
     pReq->pBus      = pBus;
     pReq->pDev      = pDev;
     pReq->ops       = ops;
@@ -343,7 +343,7 @@ end:
  * @param   pDarCdb [in], DAL下分的DAR参数
  * @return   !=NULL:成功， NULL:失败
  */
-SimScsiRequest *simScsiReqNew(SimSCSIDevice_t *pDev, U8 *pDarCdb)
+SimScsiRequest *simScsiReqNew(SimSCSIDevice_t *pDev, U8 *pDarCdb, void *pPriv)
 {   
     SimScsiRequest *pReq = NULL;
     SimSCSIBus_t   *pBus = NULL;    
@@ -385,6 +385,8 @@ SimScsiRequest *simScsiReqNew(SimSCSIDevice_t *pDev, U8 *pDarCdb)
 
     pReq = simScsiReqAlloc(ops, pDev, pDarCdb);   
     SIM_CHECK_PTR(pReq, NULL, "   ");
+
+    pReq->pPriv = pPriv;
     
     simMemCpy(pReq->cmd, cmd, sizeof(pReq->cmd));
     pReq->dataLen = pReq->cmd.xferLen;

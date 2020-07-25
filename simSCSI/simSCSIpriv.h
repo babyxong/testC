@@ -218,18 +218,6 @@
 #define SWAP64_LITTLE2BIG(pX)   SWAP64_BIGXLITTLE(pX)
 
 /**
- * @brief   指针参数校验
- * @param   ptr [in],p
- */
-#define SIM_CHECK_PTR(p) \
-        {\
-            (NULL == p)\
-            log();
-        }
-        
-
-
-/**
  * @brief   模拟平台二期支持的CDB命令
  * @param   Opcode [in],
  * @return  0:支持， <0:不支持

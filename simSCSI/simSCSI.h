@@ -44,8 +44,8 @@ typedef struct SimScsiCmd {
 
 ///< SCSI 数据缓存
 typedef struct IOvector {
-    void *iovBase; ///< 数据缓冲区基地址
-    size_t iovLen; ///< 数据缓冲区长度
+    void   *base; ///< 数据缓冲区基地址
+    size_t  len; ///< 数据缓冲区长度
 }IOvector_t;
 
 typedef struct SimSCSIBusOps {
@@ -70,7 +70,7 @@ struct SimSCSIBus {
 ///< SCSI请求数据结构
 struct SimScsiRequest {
     SimSCSIBus_t *pBus; ///< SCSI BUS结构体
-    struct DeviceAccessRequest *pDar; ///< 保存DAR结构指针
+   // struct DeviceAccessRequest *pDar; ///< 保存DAR结构指针
     /** 保存ScsiDevice结构指针，预期通过
      *  DAR channelID，targetDeviceID，LUN ID(0)找到对应的device
      */
@@ -99,6 +99,7 @@ struct SimScsiRequest {
     
     struct list_head;
     IOvector_t iov;     ///< 数据IOV结构
+    void *pPriv；
 };
 
 ///< SCSI消息处理回调函数组定义
