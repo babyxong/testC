@@ -5,24 +5,24 @@
 
 
 #define SWAP16_BIGXLITTLE(px) \
-    ((*(uint16_t*)px & (0xFF << 0)) << 8 |\
-     (*(uint16_t*)px & (0xFF << 8)) >> 8)
+    ((*(uint16_t*)(px) & (0xFF << 0)) << 8 |\
+     (*(uint16_t*)(px) & (0xFF << 8)) >> 8)
 
 #define SWAP32_BIGXLITTLE(px) \
-    (((*(uint32_t*)px & (0xFF <<  0)) << 24) | \
-     ((*(uint32_t*)px & (0xFF <<  8)) << 8 ) | \
-     ((*(uint32_t*)px & (0xFF << 16)) >> 8 ) | \
-     ((*(uint32_t*)px & (0xFF << 24)) >> 24))
+    (((*(uint32_t*)(px) & (0xFF <<  0)) << 24) | \
+     ((*(uint32_t*)(px) & (0xFF <<  8)) << 8 ) | \
+     ((*(uint32_t*)(px) & (0xFF << 16)) >> 8 ) | \
+     ((*(uint32_t*)(px) & (0xFF << 24)) >> 24))
 
 #define SWAP64_BIGXLITTLE(px) \
-    (((*(uint64_t*)px & ((uint64_t)0xFF <<  0)) << 56) |\
-     ((*(uint64_t*)px & ((uint64_t)0xFF <<  8)) << 40) |\
-     ((*(uint64_t*)px & ((uint64_t)0xFF << 16)) << 24) |\
-     ((*(uint64_t*)px & ((uint64_t)0xFF << 24)) << 8)  |\
-     ((*(uint64_t*)px & ((uint64_t)0xFF << 32)) >> 8)  |\
-     ((*(uint64_t*)px & ((uint64_t)0xFF << 40)) >> 24) |\
-     ((*(uint64_t*)px & ((uint64_t)0xFF << 48)) >> 40) |\
-     ((*(uint64_t*)px & ((uint64_t)0xFF << 56)) >> 56))    
+    (((*(uint64_t*)(px) & ((uint64_t)0xFF <<  0)) << 56) |\
+     ((*(uint64_t*)(px) & ((uint64_t)0xFF <<  8)) << 40) |\
+     ((*(uint64_t*)(px) & ((uint64_t)0xFF << 16)) << 24) |\
+     ((*(uint64_t*)(px) & ((uint64_t)0xFF << 24)) << 8)  |\
+     ((*(uint64_t*)(px) & ((uint64_t)0xFF << 32)) >> 8)  |\
+     ((*(uint64_t*)(px) & ((uint64_t)0xFF << 40)) >> 24) |\
+     ((*(uint64_t*)(px) & ((uint64_t)0xFF << 48)) >> 40) |\
+     ((*(uint64_t*)(px) & ((uint64_t)0xFF << 56)) >> 56))    
      
 #define SWAP16_BIG2LITTLE(pX)   SWAP16_BIGXLITTLE(pX)
 #define SWAP16_LITTLE2BIG(pX)   SWAP16_BIGXLITTLE(pX)
