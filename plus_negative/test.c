@@ -12,7 +12,7 @@
   
 int main(void)
 {
-    
+    int aaa = 1234;
     
   printf ("============= %d \n",PLUS_ONE);
   printf ("============= %#x \n",PLUS_ONE);
@@ -24,5 +24,7 @@ int main(void)
     printf ("========~===== %d \n", -PLUS_ONE);
    printf ("========~===== - %#x \n", ~(-PLUS_ONE)+1);
 	
-
+    
+    printf("============= %d \n",aaa);
+    printf("============= %d \n", -aaa);
 }

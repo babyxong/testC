@@ -22,13 +22,21 @@ static inline int32_t BigLittleSwap(const uint8_t *pSrcData, uint8_t *pDestData,
     int32_t ret;
 	uint32_t i;
 	uint8_t  tmp;
-	
-	if (NULL == pSrcData || NULL == pDestData) {
-		printf(" 需要打印日志 ");	
-		ret = -1;
-	}
- 
+    
+    if (dstSize <srcSize ) {
+         printf ("=====errr \n");
+    }
+
 	for (i = 0; i < (srcSize+1)/2; i++) {
+        
+        if (srcSize -i -1 > dstSize ||
+            srcSize -i -1 < 0 ||
+            i > dstSize) 
+        {
+            break;
+            printf ("=====break \n");
+        }
+        
 		*(pDestData + srcSize -i -1) = *(pSrcData+i);		
 		*(pDestData+i) = *(pSrcData + srcSize -i -1);
 	}
@@ -47,14 +55,19 @@ int main(void)
 {
 	uint32_t n =0;
 
-	uint8_t Data1[] ={0x01, 0x02, 0x03, 0x04, 0x05};  
+	uint8_t Data1[] ="HELLL....";  
     uint8_t Data2[100]; 
  
 	BigLittleSwap(&Data1[0], &Data2[0],  sizeof(Data1), sizeof(Data2));
+    
+    
 
 	for (n =0 ;n< sizeof(Data1);n++)
 	{
 		printf("swap1 %d = %#lx\n", n,*(Data2+n));
+        printf("data1 %d = %#c\n", n,*(Data1+n));
+        printf("data2 %d = %#c\n", n,*(Data2+n));
+        printf("==============\n", n,*(Data2+n));
 	}
 }
 

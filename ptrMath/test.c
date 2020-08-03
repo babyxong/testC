@@ -22,4 +22,19 @@ int main(void)
   
   
   printf("====%u \n",Ma);
+  
+  
+  double A = 123;
+  double B = 456;
+  
+  double C  = 789;
+  
+  A /= B/C;
+  
+  
+  printf ("===== INT64_C(c) ======%d \n ",  INT64_C(1)<<10 ) ;
+  
+  printf("====%f \n",A);
+  
+  printf("====%f \n",A);
 }
