@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <unistd.h>
-
+#include <string.h>
 /* Macro definitions ---------------------------------------------------------*/
 /* Type definitions ----------------------------------------------------------*/
 /* Variable declarations -----------------------------------------------------*/
@@ -20,12 +20,7 @@
 static inline int32_t simBigLittleSwap(uint8_t *pData, uint32_t size)
 {
 	uint32_t i;
-	uint8_t  tmp;
-	
-	if (NULL == pData) {
-		printf(" 需要打印日志 ");
-		return -1;
-	}
+	uint8_t  tmp;	
  
 	for (i = 0; i < (size+1)/2; i++) {
 		tmp = *(pData+i);
@@ -42,6 +37,14 @@ static inline int32_t simBigLittleSwap(uint8_t *pData, uint32_t size)
 int main(void)
 {
 	uint32_t n =0;
+    
+    uint32_t AAA =0xFFFFFF;
+    
+    memcpy(&AAA, &AAA, sizeof(AAA));
+    
+    
+    printf ("==============%#x   \n", AAA);
+    
 
 	uint8_t Data1[]={0x01, 0x02, 0x03, 0x04, 0x05}; 
     
@@ -51,7 +54,7 @@ int main(void)
 	}
     
 	simBigLittleSwap(&Data1[0], sizeof(Data1));
-
+    printf("========Swap result===================\n");
 	for (n =0 ;n< sizeof(Data1);n++)
 	{
 		printf("swap1 %d = %#lx\n", n,*(Data1+n));
