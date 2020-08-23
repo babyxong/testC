@@ -13,10 +13,15 @@ client.c
  
  #define STRING  "Hello World!!!!  mem ok"
  
+  /*
   
+    
+  相当于  int *p = 调用的部分的值
+  */
  void Fun(int *p)
  {
     printf ("FUN ***********0 %p\n", p);
+    printf ("FUN ***********0& %p\n", &p);
     free (p);
     p = NULL;
  }
@@ -30,7 +35,9 @@ int main()
     
     p = malloc(100);
     
+    
     printf ("===========1 %p \n", p);
+    printf ("===========1& %p \n", &p);
     
     Fun(p);
     

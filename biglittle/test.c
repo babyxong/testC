@@ -38,12 +38,17 @@ static void BigAndLittleEndianConversion(void *data, uint32_t size)
 int main(void)
 {
   
-  uint64_t bigEndianData             = 0x123456789ABCDEF0;
+  uint64_t bigEndianData             = 0x0123456789ABCDEF;
   
 	printf(" bigEndianData size: %u  \n", sizeof(bigEndianData));
   
   BigAndLittleEndianConversion(&bigEndianData, sizeof(bigEndianData));
   
+
+  uint64_t b512    = 512;
+  
+  
+
 
 	printf("bigEndianData = %#lx\n", bigEndianData);
 

@@ -53,7 +53,7 @@ int main(int argc,char **argv)
     ret = aio_return(&rd);
     printf("\n\n返回值为:%d\n",ret);
 	printf("%s\n",rd.aio_buf);
-	free(rd.aio_buf);
+	free((void *)rd.aio_buf);
 	close(fd);
     return 0;
 }
