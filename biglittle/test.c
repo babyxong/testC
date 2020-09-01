@@ -37,6 +37,38 @@ static void BigAndLittleEndianConversion(void *data, uint32_t size)
   */
 int main(void)
 {
+  char  xxxx = -1;
+  unsigned char aaaa = 255;
+  printf ("===1===%c \n", (unsigned char)xxxx) ;  
+  printf ("===255===%c \n", aaaa) ; 
+  
+  
+  printf ("======%u \n", xxxx) ; 
+  printf ("======%#x \n", (uint8_t)xxxx) ;  
+  printf ("======%#x \n", 253) ; 
+
+  int32_t  I32A = -1;
+  uint32_t U32A = 0xFFFFFFFF;
+  
+  printf ("===i32===%u \n", I32A) ; 
+  printf ("===u32===%u \n", U32A) ;  
+  printf ("======%#x \n", 253) ; 
+  
+  if (I32A == U32A) 
+  {
+      printf ("wo tmd jinlaile   ===== \n");
+  }
+    
+  if (xxxx == aaaa) 
+  {
+    printf ("wo buzhidao jinbujinlai  ===== \n");
+  }      
+    
+  if (253 == xxxx) {
+      printf ("xiangdeng ===== \n");
+  }
+  
+  
   
   uint64_t bigEndianData             = 0x0123456789ABCDEF;
   
@@ -46,6 +78,7 @@ int main(void)
   
 
   uint64_t b512    = 512;
+  
   
   
 
