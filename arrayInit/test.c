@@ -1,7 +1,7 @@
 /* Header includes -----------------------------------------------------------*/
 #include <stdio.h>
 #include <stdint.h>
-
+#include <string.h>
 
 /**
   * @brief  Main program.
@@ -20,12 +20,16 @@
 */  
 uint8_t   arr1[8] = {0};
 uint8_t   arr2[8] = {1}; 
-  
+
+void fun(void)
+{
+   uint8_t test[20];
+   uint8_t test1[223];
+   memcpy(test, test1, 1024*1024*10);
+}
+
 int main(void)
 {
-   printf("INT32MAX: %#x \n", INT32_MAX);
-     
-	printf("arr1 [0]=%u [1]=%u \n", arr1[0], arr1[1]);
-    
-   printf("arr2 [0]=%u [1]=%u \n", arr2[0], arr2[1]);
+    fun();
+   
 }

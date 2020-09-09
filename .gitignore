@@ -3,3 +3,13 @@
 *.swp
 core.*
 
+aio/app
+aio/app1
+aio/app2
+aio/app_suspend
+aio/lioapp
+aio/test1.txt
+aio/test2.txt
+printf.o
+ptrMsg/ptrspace2.c
+queue/=
