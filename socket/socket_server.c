@@ -27,7 +27,7 @@ int main()
         serv_addr.sin_family = AF_INET;
         serv_addr.sin_port = htons(PORT);
 
-        inet_aton("10.2.16.254", &serv_addr.sin_addr);
+        inet_aton("192.168.134.129", &serv_addr.sin_addr);
 
         /*3 绑定socket和通信地址*/
         int res = bind(sockfd, (struct sockaddr *)&serv_addr,  sizeof(serv_addr));

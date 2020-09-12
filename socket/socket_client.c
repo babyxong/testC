@@ -27,7 +27,7 @@ int main()
     /*设置为服务器进程的端口号*/
     clent_addr.sin_port = htons(PORT);
     /*服务器所在主机IP地址*/
-    inet_aton("10.2.16.254", &clent_addr.sin_addr);
+    inet_aton("192.168.134.129", &clent_addr.sin_addr);
     
     /*3 连接服务器*/
     int res = connect(sockfd, (struct sockaddr *)&clent_addr, sizeof(clent_addr));

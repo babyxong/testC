@@ -13,3 +13,4 @@ aio/test2.txt
 printf.o
 ptrMsg/ptrspace2.c
 queue/=
+*.out_dump
