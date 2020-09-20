@@ -14,7 +14,7 @@
 #include<signal.h>
 
 
-#define BUFFER_SIZE 1025
+#define BUFFER_SIZE 1025000000000
 
 
 void aio_completion_handler(sigval_t sigval)
@@ -25,7 +25,7 @@ void aio_completion_handler(sigval_t sigval)
 
     prd = (struct aiocb *)sigval.sival_ptr;
 
-    printf("hello\n");
+    printf("hello ====================== callback err:%d\n", aio_error(prd));
 
     //获取返回值
     ret = aio_return(prd);
@@ -46,7 +46,7 @@ int main(int argc,char **argv)
     bzero(&rd,sizeof(rd));
 
     rd.aio_fildes = fd;
-    rd.aio_buf = (char *)malloc(sizeof(BUFFER_SIZE + 1));
+    rd.aio_buf = (char *)malloc(BUFFER_SIZE + 1);
     rd.aio_nbytes = BUFFER_SIZE;
     rd.aio_offset = 0;
 
@@ -62,10 +62,14 @@ int main(int argc,char **argv)
     {
         perror("aio_read");
     }
+    
+    ret = aio_cancel(rd.aio_fildes, &rd);
+    printf ("=======cancel ret:%d \n", ret);
 
     printf("异步读以开始\n");
     sleep(1);
     printf("异步读结束\n");
+    close(fd);
 
     return 0;
 }
