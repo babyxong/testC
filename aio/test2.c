@@ -14,7 +14,7 @@
 #include<signal.h>
 
 
-#define BUFFER_SIZE 1025000000000
+#define BUFFER_SIZE 1024*1024*10
 
 
 void aio_completion_handler(sigval_t sigval)
@@ -29,6 +29,7 @@ void aio_completion_handler(sigval_t sigval)
 
     //获取返回值
     ret = aio_return(prd);
+    printf ("================== return ret:%d\n", ret);
 
 }
 
@@ -37,7 +38,7 @@ int main(int argc,char **argv)
     int fd,ret;
     struct aiocb rd;
 
-    fd = open("test.txt",O_RDONLY);
+    fd = open("test.txt", O_RDONLY);
     if(fd < 0)
     {
         perror("test.txt");
@@ -47,6 +48,11 @@ int main(int argc,char **argv)
 
     rd.aio_fildes = fd;
     rd.aio_buf = (char *)malloc(BUFFER_SIZE + 1);
+    printf ("***********************buff %p \n", rd.aio_buf); 
+    if (NULL == rd.aio_buf) 
+    {
+            return 1;
+    }
     rd.aio_nbytes = BUFFER_SIZE;
     rd.aio_offset = 0;
 
@@ -56,13 +62,21 @@ int main(int argc,char **argv)
     rd.aio_sigevent.sigev_notify_attributes = NULL;//使用默认属性
     rd.aio_sigevent.sigev_value.sival_ptr = &rd;//在aiocb控制块中加入自己的引用
 
-    //异步读取文件
-    ret = aio_read(&rd);
-    if(ret < 0)
+    while (1) 
     {
-        perror("aio_read");
-    }
+        ret = aio_write(&rd);
+        if(ret < 0)
+        {
+            perror("aio_write");
+        }
     
+        //异步读取文件
+        ret = aio_read(&rd);
+        if(ret < 0)
+        {
+            perror("aio_read");
+        }
+    }
     ret = aio_cancel(rd.aio_fildes, &rd);
     printf ("=======cancel ret:%d \n", ret);
 
