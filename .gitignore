@@ -15,3 +15,4 @@ ptrMsg/ptrspace2.c
 queue/=
 *.out_dump
 *.elf
+*.txt
