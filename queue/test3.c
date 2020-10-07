@@ -141,6 +141,7 @@ void DeQueue(HeadQueue *queue, data_t *value)
 	}
 	remove = queue->front;
 	queue->front = remove->next;
+	queue--;
  
 	if (queue->front == NULL)
 		queue->rear = NULL;
