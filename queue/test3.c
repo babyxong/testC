@@ -17,8 +17,9 @@ typedef int data_t;
 
 typedef struct LinkNode
 {
+    struct LinkNode *next;
 	data_t data;
-	struct LinkNode *next;
+	
 }LinkNode, *LinkQueue;
  
 typedef struct
@@ -41,14 +42,21 @@ int main(int argc, const char *argv[])
 	int i;
 	HeadQueue *queue;
 	queue = CreateEmptyQueue();
- 
-	EnQueue(queue, 20);
-	EnQueue(queue, 30);
+
+    /*
+     * 队列先入先出
+     */ 
+	EnQueue(queue, 20);  //向队列中加入数值20
+	
+	EnQueue(queue, 30);  //向队列中加入数值30
  
 	DeQueue(queue, &data);
-	printf("data is %d\n", data);
+	printf("data is %d\n", data);  //取出第一次压入的数值20值并打印
+	
 	DeQueue(queue, &data);
-	printf("data is %d\n", data);
+	printf("data is %d\n", data);  //取出第一次压入的数值30并打印
+
+	
 	DeQueue(queue, &data);
 	printf("data is %d\n", data);
  
@@ -97,24 +105,32 @@ bool EmptyLinkQueue(HeadQueue *queue)
 void EnQueue(HeadQueue *queue, data_t value)
 {
 	LinkQueue new;
+	
 	if (queue == NULL)
 	{
 		printf("EnQueue Error!\n");
 		return ;
 	}
+	
 	new = (LinkQueue)malloc(sizeof(LinkNode));
 	if (new == NULL)
 	{
 		perror("Insert value failed");
 		return ;
 	}
+	
 	new->data = value;
 	new->next = NULL;
  
 	if (EmptyLinkQueue(queue))
+	{
+	    //队列为空时候
+	    printf("队列为空入队 \n");
 		queue->front = queue->rear = new;
+    }
 	else
 	{
+	    // 加到队列的尾部
 		queue->rear->next = new;
 		queue->rear = new;
 		queue->num++;
@@ -123,11 +139,12 @@ void EnQueue(HeadQueue *queue, data_t value)
 	return ;
 }
  
-//删除队列元素
+//删除队列元素。并出队取出队列中的值
 void DeQueue(HeadQueue *queue, data_t *value)
 {
 	*value = 0;
 	LinkQueue remove;
+	
 	if (queue == NULL)
 	{
 		printf("DeQueue error!\n");
@@ -139,6 +156,8 @@ void DeQueue(HeadQueue *queue, data_t *value)
 		printf("queue is empty!\n");
 		return ;
 	}
+
+	//从队列头部取出
 	remove = queue->front;
 	queue->front = remove->next;
 	queue--;
