@@ -1,3 +1,4 @@
+#include <sys/file.h>
 
 #include<stdio.h>
 #include<stdlib.h>   // exit
@@ -20,18 +21,22 @@ int main()
 		exit(1);
 	}
  
-	for(i=0; i<10; ++i)
+	while(1)
 	{
 		time(&tp);  // 取系统当前时间
 		n=sprintf(buf,"Process %d's time is %s",getpid(),ctime(&tp));
 		printf("Send message: %s", buf); // 打印
-		if(write(fd, buf, n+1) < 0)  // 写入到FIFO中
+        
+        flock(fd, LOCK_EX);
+        
+		if(write(fd, buf, 1024)< 0)  // 写入到FIFO中
 		{
 			perror("Write FIFO Failed");
 			close(fd);
 			exit(1);
 		}
 		sleep(1);  // 休眠1秒
+          flock(fd, LOCK_UN);
 	}
  
 	close(fd);  // 关闭FIFO文件

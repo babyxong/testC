@@ -16,3 +16,6 @@ queue/=
 *.out_dump
 *.elf
 *.txt
+*app*
+*.temp
+*temp
