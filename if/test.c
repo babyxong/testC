@@ -22,6 +22,16 @@ int main()
 {
     char * pchar;
     
+    {
+        int n = 123;
+        printf(" ==0= n:%d np:%p   \n", n, &n);
+        
+    }
+    {
+         int n;
+         printf(" ==1= n:%d  np:%p   \n",n, &n);
+    }
+    
     
     int *p;
     
@@ -35,5 +45,6 @@ int main()
     printf("free ==1= \n");
     free(p);
     printf("free ==2=  %p   \n", p);
-   
+
+    
 }
