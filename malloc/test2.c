@@ -22,8 +22,11 @@ int main()
     
     
     p = malloc(100);
+    memset(p,0,100);
     
-    printf ("===========1 %p \n", p);
+      memcpy(p, "23232323232323232323", -11000);
+    printf ("===========1 %s \n", p);
+  
   
     free(p);
 }

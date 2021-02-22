@@ -1,14 +1,23 @@
 	
 CFLAG+=  -fsanitize=address -fsanitize-recover=address 
-ARCH := 12231212
+ARCH := 1111111111111111111111
 
-all:    
-	gcc  write_fifo.c -g  -o write.app    $(CFLAG) -lpthread
-	gcc read_fifo.c -g -o read.app   $(CFLAG) -lpthread
+all: 
+	@$(MAKE) xuh ARCH=222222
+	
+	
+	@echo  $(ARCH) 
+#	gcc  write_fifo.c -g  -o write.app    $(CFLAG) -lpthread
+#	gcc read_fifo.c -g -o read.app   $(CFLAG) -lpthread
+    
+    
 clean:
 	-rm -f *.temp    
 	-rm -f *.app
-    
+ 
+xuh:
+	@echo ================== $(ARCH) 
+
     
 premake:
 	echo $(ARCH)=====1
@@ -49,4 +58,4 @@ release: Compiling
 xuhong: xuhong0
 	echo $(ARCH)
     #下面所有的目标都是并行走的
-	$(MAKE) ARCH=********* xuhong1  xuhong2 xuhong3  premake xuhong4
+	$(MAKE)  xuhong1  xuhong2 xuhong3  premake xuhong4
