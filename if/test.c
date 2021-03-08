@@ -14,9 +14,10 @@ client.c
  #define STRING  "Hello World!!!!  mem ok"
 
 struct xuhongSt {
-    unsigned char a:1;
-    unsigned char b:7;
+    unsigned int a:1;
+    unsigned int b:7;
     
+    unsigned int c ;
 };
 
 //union wy
@@ -53,17 +54,18 @@ int main()
     
     struct xuhongSt testSt;
     
-    memset(&testSt, 0xff, 1);
-    au = testSt.a;
-    printf("====testSt size %u \n", sizeof(testSt));
-    printf("====aaaa   size %u \n", sizeof(aaaa));
-    printf("====111==%u===== \n", au);
-    if (au ==0x01) {
-        printf("====1222221==%c===== \n", au);
-    }
+    memset(&testSt, 0xff, 2);
     
-    au = testSt.b;
-    printf("====222==%u===== \n", au);
+    printf("====testSt size %u \n", sizeof(testSt));
+    
+    printf("====testSt &a  %p \n", &testSt);
+ //   printf("====testSt &a  %p \n", &testSt.a);
+ //   printf("====testSt &b  %p \n", &testSt.b);
+    printf("====testSt &c  %p \n", &testSt.c);
+
+    printf("====testSt a  %#x \n", testSt.a);
+    printf("====testSt b  %#x \n", testSt.b);
+    printf("====testSt c  %#x \n", testSt.c);
     
  //   tmp.s = 174;                           //二进制形式是10101110
  //    printf("tmp.s is %d\n",tmp.s);

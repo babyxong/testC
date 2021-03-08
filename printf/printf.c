@@ -16,4 +16,6 @@ void main(void)
     printf ("=========%lld \n", Au64);
      printf ("=========%lld \n", As64);
      printf ("=========%lld \n", As64);
+     
+     printf ("\t =\t=88888888=======%lld \n", Au64);
 }
