@@ -68,7 +68,8 @@ int main()
                 perror("accept failed");
                 exit(-1);
             }
-        printf("有一个客户端连接到服务器len[%d]，它是:%s\n", len, inet_ntoa(fromaddr.sin_addr));
+            
+            printf("有一个客户端连接到服务器len[%d]，它是:%s\n", len, inet_ntoa(fromaddr.sin_addr));
 
         
                 /*6 处理客户端数据*/
