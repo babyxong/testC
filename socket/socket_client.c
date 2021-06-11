@@ -41,7 +41,7 @@ int main()
     /*4 和服务器交换数据*/
     char buf[100] = {0};
     char *str = "借点钱可以吗...";
-    write(sockfd, str, strlen(str));
+    send(sockfd, str, strlen(str), 0);
     read(sockfd, buf, sizeof(buf));
     printf("服务器说:%s\n", buf);
     

@@ -35,6 +35,12 @@ void funA(int **p)
 void main(void)
 {
     int *p = NULL;   
+    
+    void *tatp = NULL;
+    
+    
+    printf("tatp =%p", tatp+1);
+    
     p = &gAAAA;
     
     printf ("gAAAA:%p  gBBBB:%p \n\r", &gAAAA, &gBBBB);
